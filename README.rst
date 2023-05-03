@@ -1,73 +1,12 @@
-WinChipHead (沁恒) CH341 linux driver for I2C / SPI and GPIO mode
+WinChipHead (沁恒) CH347 linux driver for I2C / SPI and GPIO mode
 =================================================================
 
-The CH341 is declined in several flavors, and may support one or more
-of UART, SPI, I2C and GPIO, but not always simultaneously::
-
-  - CH341 A/B/F: UART, Printer, SPI, I2C and GPIO
-  - CH341 C/T: UART and I2C
-  - CH341 H: SPI
-
-They work in 3 different modes, with only one being presented
+They work in 4 different modes, with only two being presented
 depending on the USB PID::
 
-  - 0x5523: UART mode, covered by the USB `ch341` serial driver
-  - 0x5512: SPI/I2C/GPIO mode, covered by this ch341_buses driver
-  - 0x5584: Parallel printer mode, covered by the USB `usblp` driver
+  - 0x55db: SPI/I2C/GPIO mode, covered by this ch347_buses driver
+  - 0x55dd: JTAG/I2C/GPIO mode, covered by this ch347_buses driver
 
-From linux kernel 5.10 to 5.16, the 0x5512 PID was unfortunately also
-claimed by the driver for the UART part, and will conflict with this
-driver. Blacklisting that module or deleting it will solve that
-problem. In `/etc/modprobe.d/blacklist.conf`, add the following line
-to prevent loading of the serial driver::
-
-  blacklist ch341
-
-Mode selection is done at the hardware level by tying some
-pins. Breakout boards with one of the CH341 chip usually have one or
-more jumpers to select which mode they work on. At least one model
-(CJMCU-341) appears to need bridging some solder pads to select a
-different default. Breakout boards also don't usually offer an option
-to configure the chip into printer mode; for that case, connect the
-SCL and SDA lines directly together.
-
-The various CH341 appear to be indistinguishable from the
-software. For instance the ch341-buses driver will present a GPIO
-interface for the CH341T although physical pins are not present, and
-the device will accept GPIO commands.
-
-Some breakout boards work in 3.3V and 5V depending on some
-jumpers.
-
-The black chip programmer with a ZIF socket will power the CH341 at
-3.3V if a jumper is set, but will only output 5V to the chips to be
-programmed, which is not always desirable. A hardware hack to use 3.3V
-everywhere, involving some soldering, is available there::
-
-  https://eevblog.com/forum/repair/ch341a-serial-memory-programmer-power-supply-fix/
-
-The ch341-buses driver has been tested with a CH341A, CH341B and
-CH341T.
-
-Some sample code for the CH341 is available at the manufacturer
-website::
-
-  http://wch-ic.com/products/CH341.html
-
-The following repository contains a lot of information on these chips,
-including datasheets.
-
-  https://github.com/boseji/CH341-Store.git
-
-This driver is based on, merges, and expands the following
-pre-existing works::
-
-  https://github.com/gschorcht/spi-ch341-usb.git
-  https://github.com/gschorcht/i2c-ch341-usb.git
-
-Warning: try not to yank the USB device out if it's being used. The
-linux subsystems gpio and spi may crash or leak resources. This is not
-a problem with the driver, but the subsystems themselves.
 
 
 Building the driver
@@ -77,10 +16,9 @@ The driver will build for the active kernel::
 
   $ make
 
-This will create `ch341-buses.ko`, which can the be insmod'ed.
+This will create `ch347-buses.ko`, which can the be insmod'ed.
 
-The driver has been tested with a linux kernel 5.11. It will also
-build for a linux kernel 5.14.
+The driver has been tested with a linux kernel 5.19
 
 Setup
 -----
@@ -98,9 +36,10 @@ The following is more safe. As root, create a group, add the user to
 the group and create a udev rule for that group that will bind to the
 devices recognized by the driver::
 
-  $ groupadd ch341
-  $ adduser "$USER" ch341
-  $ echo 'SUBSYSTEMS=="usb" ATTRS{idProduct}=="5512" ATTRS{idVendor}=="1a86" GROUP="ch341" MODE="0660"' > /etc/udev/rules.d/99-ch341.rules
+  $ groupadd ch347
+  $ adduser "$USER" ch347
+  $ echo 'SUBSYSTEMS=="usb" ATTRS{idProduct}=="55db" ATTRS{idVendor}=="1a86" GROUP="ch347" MODE="0660"' > /etc/udev/rules.d/99-ch347.rules
+  $ echo 'SUBSYSTEMS=="usb" ATTRS{idProduct}=="55dd" ATTRS{idVendor}=="1a86" GROUP="ch347" MODE="0660"' >> /etc/udev/rules.d/99-ch347.rules
 
 After plugging in the USB device, the various /dev entries will be
 accessible to the ch341 group::
@@ -114,16 +53,16 @@ accessible to the ch341 group::
 I2C
 ---
 
-The ch341 supports 4 different speeds: 20kHz, 100kHz, 400kHz and
+The ch347 supports 4 different speeds: 20kHz, 100kHz, 400kHz and
 750kHz. The driver only supports 100kHz by default, and that currently
 cannot be dynamically changed. It is possible to change it in the
-ch341_i2c_init() function. A future patch should address that issue.
+ch347_i2c_init() function. A future patch should address that issue.
 
 To find the device number::
 
   $ i2cdetect -l
   ...
-  i2c-11        unknown           CH341 I2C USB bus 003 device 005        N/A
+  i2c-11        unknown           CH347 I2C USB bus 003 device 005        N/A
 
 Adding support for a device supported by Linux is easy. For instance::
 
