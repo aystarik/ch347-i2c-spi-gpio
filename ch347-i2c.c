@@ -214,16 +214,32 @@ int CH347_i2c_init(struct CH347_device *dev)
 	dev->adapter.dev.parent = &dev->iface->dev;
 
     /* Set CH347 i2c speed */
+    mutex_lock(&dev->usb_lock);
     dev->obuf[0] = CH347_CMD_I2C_STREAM;
     dev->obuf[1] = CH347_CMD_I2C_STM_SET | CH347_I2C_STANDARD_SPEED;
     dev->obuf[2] = CH347_CMD_I2C_STM_END;
-	mutex_lock(&dev->usb_lock);
+
     retval = usb_bulk_msg(dev->usb_dev, usb_sndbulkpipe(dev->usb_dev, dev->ep_out), dev->obuf, 3, &actual, DEFAULT_TIMEOUT);
-	mutex_unlock(&dev->usb_lock);
-	if (retval < 0) {
-		dev_err(&dev->iface->dev, "Cannot set I2C speed\n");
-		return -EIO;
-	}
+    mutex_unlock(&dev->usb_lock);
+    if (retval < 0) {
+        dev_err(&dev->iface->dev, "Cannot set I2C speed\n");
+        return -EIO;
+    }
+
+    mutex_lock(&dev->usb_lock);
+    memset (dev->obuf, 0, 16);
+    if (dev->usb_dev->descriptor.idProduct == 0x55dd) {
+        // force GPIO #3 (SCL) to output high
+        dev->obuf[0] = 0xcc;
+        dev->obuf[1] = 8;
+        dev->obuf[3 + 3] = 0xf8;
+        retval = usb_bulk_msg(dev->usb_dev, usb_sndbulkpipe(dev->usb_dev, dev->ep_out), dev->obuf, 11, &actual, DEFAULT_TIMEOUT);
+    }
+    mutex_unlock(&dev->usb_lock);
+    if (retval < 0) {
+        dev_err(&dev->iface->dev, "Cannot force SCL high\n");
+        return -EIO;
+    }
 
 	i2c_add_adapter(&dev->adapter);
 	dev->i2c_init = true;
