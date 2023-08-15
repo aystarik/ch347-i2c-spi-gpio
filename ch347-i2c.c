@@ -52,6 +52,19 @@ static int CH347_usb_transfer(struct CH347_device *CH347_dev, int out_len, int i
     return actual;
 }
 
+int CH347_i2c_read1(struct CH347_device *dev, uint8_t addr) {
+	uint8_t *ptr = dev->obuf;
+	*ptr++ = CH347_CMD_I2C_STREAM;
+	*ptr++ = CH347_CMD_I2C_STM_STA;
+	*ptr++ = CH347_CMD_I2C_STM_OUT | 1;
+	*ptr++ = (addr << 1) | 1;
+	*ptr++ = CH347_CMD_I2C_STM_IN;
+	*ptr++ = CH347_CMD_I2C_STM_STO;
+	*ptr++ = CH347_CMD_I2C_STM_END;
+	CH347_usb_transfer(dev, ptr - dev->obuf, SEG_SIZE);
+	return 0;
+}
+
 int CH347_i2c_read(struct CH347_device *dev, struct i2c_msg *msg)
 {
     int byteoffset = 0, bytestoread;
@@ -203,6 +216,7 @@ int CH347_i2c_init(struct CH347_device *dev)
 {
 	int retval;
 	int actual;
+	struct i2c_msg;
 
 	dev->adapter.owner = THIS_MODULE;
 	dev->adapter.class = I2C_CLASS_HWMON;
@@ -234,6 +248,7 @@ int CH347_i2c_init(struct CH347_device *dev)
         dev->obuf[1] = 8;
         dev->obuf[3 + 3] = 0xf8;
         retval = usb_bulk_msg(dev->usb_dev, usb_sndbulkpipe(dev->usb_dev, dev->ep_out), dev->obuf, 11, &actual, DEFAULT_TIMEOUT);
+        
     }
     mutex_unlock(&dev->usb_lock);
     if (retval < 0) {

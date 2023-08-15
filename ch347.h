@@ -26,30 +26,15 @@ struct CH347_device {
     u8 ibuf[SEG_SIZE];
     u8 obuf[SEG_SIZE];
 
+	struct gpio_chip gpio;
+	u8 gpio_ibuf[3 + 8];
+	u8 gpio_obuf[3 + 8];
+
     /* I2C */
 	struct i2c_adapter adapter;
 	bool i2c_init;
 
 #if 0
-	/* GPIO */
-	struct gpio_chip gpio;
-	struct mutex gpio_lock;
-	bool gpio_init;
-	u16 gpio_dir;		/* 1 bit per pin, 0=IN, 1=OUT. */
-	u16 gpio_last_read;	/* last GPIO values read */
-	u16 gpio_last_written;	/* last GPIO values written */
-	u8 gpio_buf[SEG_SIZE];
-
-	struct {
-		char name[32];
-		bool enabled;
-		struct irq_chip irq;
-		int num;
-		struct urb *urb;
-		struct usb_anchor urb_out;
-        u8 buf[CH347_USB_MAX_INTR_SIZE];
-	} gpio_irq;
-
 	/* SPI */
 	struct spi_master *master;
 	struct mutex spi_lock;
@@ -65,9 +50,9 @@ struct CH347_device {
 
 void CH347_i2c_remove(struct CH347_device *dev);
 int CH347_i2c_init(struct CH347_device *dev);
+void ch347_gpio_remove(struct CH347_device *dev);
+int ch347_gpio_init(struct CH347_device *dev);
 #if 0
-void CH347_gpio_remove(struct CH347_device *dev);
-int CH347_gpio_init(struct CH347_device *dev);
 void CH347_spi_remove(struct CH347_device *dev);
 int CH347_spi_init(struct CH347_device *dev);
 #endif
