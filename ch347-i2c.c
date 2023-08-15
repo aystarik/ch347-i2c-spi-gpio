@@ -135,7 +135,7 @@ int CH347_i2c_write(struct CH347_device *dev, struct i2c_msg *msg) {
         if (left == 0) {  // Stop packet
             *outptr++ = CH347_CMD_I2C_STM_STO;
         }
-        *outptr = CH347_CMD_I2C_STM_END;
+        *outptr++ = CH347_CMD_I2C_STM_END;
         first = false;
         ret = CH347_usb_transfer(dev, outptr - dev->obuf, SEG_SIZE);
         if (ret > 0) {
